@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>{% block title %}আড্ডা{% endblock %}</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;600;700;800&family=Hind+Siliguri:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+{% if me %}
+<div class="shell">
+  <aside class="sidebar">
+    <div class="brand">আড্ডা</div>
+    <a class="side-link {{ 'active' if request.endpoint=='home' else '' }}" href="{{ url_for('home') }}">
+      <span class="ico">🏠</span> হোম
+    </a>
+    <a class="side-link {{ 'active' if request.endpoint=='people' else '' }}" href="{{ url_for('people') }}">
+      <span class="ico">👥</span> মানুষ
+    </a>
+    <a class="side-link {{ 'active' if request.endpoint in ['messages_inbox','chat'] else '' }}" href="{{ url_for('messages_inbox') }}">
+      <span class="ico">💬</span> মেসেজ
+    </a>
+    <a class="side-link {{ 'active' if request.endpoint=='profile' and profile_user and profile_user.id==me.id else '' }}" href="{{ url_for('profile', user_id=me.id) }}">
+      <span class="ico">{{ me.name[0] }}</span> প্রোফাইল
+    </a>
+    <a class="side-link" href="{{ url_for('new_story') }}">
+      <span class="ico">➕</span> নতুন স্টোরি
+    </a>
+    <div class="side-spacer"></div>
+    <a class="side-link logout" href="{{ url_for('logout') }}"><span class="ico">↪</span> লগ আউট</a>
+  </aside>
+
+  <div class="mobile-topbar">
+    <div class="brand">আড্ডা</div>
+    <div class="mobile-nav">
+      <a href="{{ url_for('home') }}">🏠</a>
+      <a href="{{ url_for('people') }}">👥</a>
+      <a href="{{ url_for('messages_inbox') }}">💬</a>
+      <a href="{{ url_for('profile', user_id=me.id) }}">{{ me.name[0] }}</a>
+    </div>
+  </div>
+
+  <main class="main-col">
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        <div class="flash-wrap">
+        {% for category, msg in messages %}
+          <div class="flash flash-{{ category }}">{{ msg }}</div>
+        {% endfor %}
+        </div>
+      {% endif %}
+    {% endwith %}
+    {% block content %}{% endblock %}
+  </main>
+</div>
+{% else %}
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+      <div class="flash-wrap standalone">
+      {% for category, msg in messages %}
+        <div class="flash flash-{{ category }}">{{ msg }}</div>
+      {% endfor %}
+      </div>
+    {% endif %}
+  {% endwith %}
+  {% block auth_content %}{% endblock %}
+{% endif %}
+</body>
+</html>

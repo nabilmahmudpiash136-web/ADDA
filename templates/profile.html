@@ -1,0 +1,74 @@
+{% extends "base.html" %}
+{% block title %}{{ profile_user['name'] }} — আড্ডা{% endblock %}
+{% block content %}
+<div class="profile-head">
+  <div class="avatar-lg">
+    {% if profile_user['avatar'] %}<img src="{{ url_for('uploaded_file', filename=profile_user['avatar']) }}">{% else %}{{ profile_user['name'][0] }}{% endif %}
+  </div>
+  <h2>{{ profile_user['name'] }}</h2>
+  <p class="muted">{{ profile_user['identifier'] }}</p>
+  {% if profile_user['bio'] %}<p class="bio">{{ profile_user['bio'] }}</p>{% endif %}
+  <div class="stat-row">
+    <div><b>{{ posts|length }}</b><span>পোস্ট</span></div>
+    <div><b>{{ friend_count }}</b><span>বন্ধু</span></div>
+  </div>
+  {% if is_me %}
+  <details class="edit-details">
+    <summary>প্রোফাইল এডিট করো</summary>
+    <form method="POST" action="{{ url_for('update_profile') }}" enctype="multipart/form-data" class="edit-form">
+      <textarea name="bio" placeholder="নিজের সম্পর্কে কিছু লেখো...">{{ profile_user['bio'] or '' }}</textarea>
+      <label class="file-pill">🖼️ প্রোফাইল ছবি বদলাও<input type="file" name="avatar" accept="image/*"></label>
+      <button class="btn-post" type="submit">সেভ করো</button>
+    </form>
+  </details>
+  {% elif not is_friend %}
+  <form method="POST" action="{{ url_for('add_friend', user_id=profile_user['id']) }}">
+    <button class="mini-btn friend" type="submit">বন্ধু যোগ করো</button>
+  </form>
+  {% else %}
+  <a class="mini-btn msg" href="{{ url_for('chat', user_id=profile_user['id']) }}">মেসেজ পাঠাও</a>
+  {% endif %}
+</div>
+
+{% if posts|length == 0 %}
+  <div class="empty-state">এখনো কোনো পোস্ট নেই।</div>
+{% else %}
+<div class="feed">
+  {% for item in posts %}
+  {% set p = item.row %}
+  <div class="post-card">
+    <div class="post-head">
+      <div class="avatar-sm">
+        {% if profile_user['avatar'] %}<img src="{{ url_for('uploaded_file', filename=profile_user['avatar']) }}">{% else %}{{ profile_user['name'][0] }}{% endif %}
+      </div>
+      <div class="post-meta">
+        <div class="post-author">{{ profile_user['name'] }}</div>
+        <div class="post-time">{{ p['created_at']|time_ago }}</div>
+      </div>
+    </div>
+    {% if p['text'] %}<div class="post-text">{{ p['text'] }}</div>{% endif %}
+    {% if p['image'] %}<img class="post-image" src="{{ url_for('uploaded_file', filename=p['image']) }}">{% endif %}
+    <div class="post-actions">
+      <form method="POST" action="{{ url_for('like_post', post_id=p['id']) }}">
+        <button class="action-btn {{ 'liked' if item.liked_by_me else '' }}" type="submit">
+          {{ '❤️' if item.liked_by_me else '🤍' }} লাইক ({{ item.like_count }})
+        </button>
+      </form>
+      <button class="action-btn" type="button" onclick="document.getElementById('pc-{{ p['id'] }}').classList.toggle('open')">
+        💬 মন্তব্য ({{ item.comments|length }})
+      </button>
+    </div>
+    <div class="comments-box" id="pc-{{ p['id'] }}">
+      {% for c in item.comments %}
+        <div class="comment-line"><b>{{ c['author_name'] }}:</b> {{ c['text'] }}</div>
+      {% endfor %}
+      <form class="comment-input-row" method="POST" action="{{ url_for('comment_post', post_id=p['id']) }}">
+        <input type="text" name="text" placeholder="মন্তব্য লেখো..." required>
+        <button type="submit">পাঠাও</button>
+      </form>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
+{% endblock %}

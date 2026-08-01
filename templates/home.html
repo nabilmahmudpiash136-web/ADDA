@@ -1,0 +1,94 @@
+{% extends "base.html" %}
+{% block title %}হোম — আড্ডা{% endblock %}
+{% block content %}
+
+<div class="stories-row">
+  <a class="story-item story-add" href="{{ url_for('new_story') }}">
+    <div class="story-ring"><div class="story-avatar">+</div></div>
+    <span>স্টোরি যোগ করো</span>
+  </a>
+  {% for u in story_authors %}
+  <a class="story-item" href="{{ url_for('view_stories', user_id=u['id']) }}">
+    <div class="story-ring"><div class="story-avatar">
+      {% if u['avatar'] %}<img src="{{ url_for('uploaded_file', filename=u['avatar']) }}">{% else %}{{ u['name'][0] }}{% endif %}
+    </div></div>
+    <span>{{ 'তুমি' if u['id']==me.id else u['name'] }}</span>
+  </a>
+  {% endfor %}
+</div>
+
+<form class="composer" method="POST" action="{{ url_for('new_post') }}" enctype="multipart/form-data">
+  <textarea name="text" placeholder="মনে কী আছে, {{ me.name.split(' ')[0] }}?"></textarea>
+  <div class="composer-row">
+    <label class="file-pill">
+      🖼️ ছবি
+      <input type="file" name="image" accept="image/*" style="display:none">
+    </label>
+    <button class="btn-post" type="submit">পোস্ট করো</button>
+  </div>
+</form>
+
+{% if posts|length == 0 %}
+  <div class="empty-state">এখনো কোনো পোস্ট নেই। প্রথম পোস্টটা তুমিই করো!</div>
+{% else %}
+<div class="feed">
+  {% for item in posts %}
+  {% set p = item.row %}
+  <div class="post-card {{ 'friend-post' if (item.is_friend or item.is_me) else '' }}">
+    <div class="post-head">
+      <a href="{{ url_for('profile', user_id=p['user_id']) }}" class="avatar-sm">
+        {% if p['author_avatar'] %}<img src="{{ url_for('uploaded_file', filename=p['author_avatar']) }}">{% else %}{{ p['author_name'][0] }}{% endif %}
+      </a>
+      <div class="post-meta">
+        <div class="post-author">
+          <a href="{{ url_for('profile', user_id=p['user_id']) }}">{{ p['author_name'] }}</a>
+          {% if item.is_me %}<span class="friend-tag">তুমি</span>{% elif item.is_friend %}<span class="friend-tag">বন্ধু</span>{% endif %}
+        </div>
+        <div class="post-time">{{ p['created_at']|time_ago }}</div>
+      </div>
+      {% if not item.is_me and not item.is_friend %}
+      <form method="POST" action="{{ url_for('add_friend', user_id=p['user_id']) }}">
+        <button class="friend-cta" type="submit">বন্ধু যোগ করো</button>
+      </form>
+      {% endif %}
+    </div>
+
+    {% if p['text'] %}<div class="post-text">{{ p['text'] }}</div>{% endif %}
+    {% if p['image'] %}<img class="post-image" src="{{ url_for('uploaded_file', filename=p['image']) }}">{% endif %}
+
+    <div class="post-actions">
+      <form method="POST" action="{{ url_for('like_post', post_id=p['id']) }}">
+        <button class="action-btn {{ 'liked' if item.liked_by_me else '' }}" type="submit">
+          {{ '❤️' if item.liked_by_me else '🤍' }} লাইক ({{ item.like_count }})
+        </button>
+      </form>
+      <button class="action-btn" type="button" onclick="document.getElementById('c-{{ p['id'] }}').classList.toggle('open')">
+        💬 মন্তব্য ({{ item.comments|length }})
+      </button>
+      {% if not item.is_me %}
+      <a class="action-btn" href="{{ url_for('chat', user_id=p['user_id']) }}">✉️ মেসেজ</a>
+      {% endif %}
+    </div>
+
+    <div class="comments-box" id="c-{{ p['id'] }}">
+      {% for c in item.comments %}
+        <div class="comment-line"><b>{{ c['author_name'] }}:</b> {{ c['text'] }}</div>
+      {% endfor %}
+      <form class="comment-input-row" method="POST" action="{{ url_for('comment_post', post_id=p['id']) }}">
+        <input type="text" name="text" placeholder="মন্তব্য লেখো..." required>
+        <button type="submit">পাঠাও</button>
+      </form>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
+
+<script>
+document.querySelectorAll('.file-pill input[type=file]').forEach(inp=>{
+  inp.addEventListener('change', ()=>{
+    if(inp.files.length){ inp.closest('.file-pill').classList.add('has-file'); }
+  });
+});
+</script>
+{% endblock %}

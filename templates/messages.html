@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% block title %}মেসেজ — আড্ডা{% endblock %}
+{% block content %}
+<h2 class="page-title">মেসেজ</h2>
+{% if conversations|length == 0 %}
+  <div class="empty-state">এখনো কোনো মেসেজ নেই। "মানুষ" ট্যাব থেকে কাউকে মেসেজ পাঠাও।</div>
+{% else %}
+<div class="conv-list">
+  {% for c in conversations %}
+  <a class="conv-row" href="{{ url_for('chat', user_id=c['id']) }}">
+    <div class="avatar-sm">
+      {% if c['avatar'] %}<img src="{{ url_for('uploaded_file', filename=c['avatar']) }}">{% else %}{{ c['name'][0] }}{% endif %}
+    </div>
+    <div class="post-meta">
+      <div class="name" style="font-weight:700;font-size:14.5px;">{{ c['name'] }}</div>
+      <div class="last">{{ c['last_text'] }}</div>
+    </div>
+  </a>
+  {% endfor %}
+</div>
+{% endif %}
+{% endblock %}

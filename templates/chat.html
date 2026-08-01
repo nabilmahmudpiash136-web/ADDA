@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% block title %}{{ other['name'] }} — মেসেজ{% endblock %}
+{% block content %}
+<div class="chat-header">
+  <a class="back-btn" href="{{ url_for('messages_inbox') }}">←</a>
+  <div class="avatar-sm">
+    {% if other['avatar'] %}<img src="{{ url_for('uploaded_file', filename=other['avatar']) }}">{% else %}{{ other['name'][0] }}{% endif %}
+  </div>
+  <div style="font-weight:700;font-size:15px;">{{ other['name'] }}</div>
+</div>
+
+<div class="chat-body" id="chat-body">
+  {% if thread|length == 0 %}
+    <div class="empty-state">এখনো কোনো মেসেজ নেই। হ্যালো বলো!</div>
+  {% endif %}
+  {% for m in thread %}
+    <div class="bubble {{ 'me' if m['sender_id']==me.id else 'them' }}">{{ m['text'] }}</div>
+  {% endfor %}
+</div>
+
+<form class="chat-input-row" method="POST" action="{{ url_for('chat', user_id=other['id']) }}">
+  <input type="text" name="text" placeholder="মেসেজ লেখো..." autocomplete="off" required autofocus>
+  <button class="send-btn" type="submit">➤</button>
+</form>
+
+<script>
+  var body = document.getElementById('chat-body');
+  if(body) body.scrollTop = body.scrollHeight;
+</script>
+{% endblock %}

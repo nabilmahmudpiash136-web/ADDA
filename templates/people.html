@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% block title %}মানুষ — আড্ডা{% endblock %}
+{% block content %}
+<h2 class="page-title">সবাই</h2>
+{% if users|length == 0 %}
+  <div class="empty-state">এখনো অন্য কোনো ব্যবহারকারী নেই।</div>
+{% else %}
+<div class="people-list">
+  {% for u in users %}
+  <div class="person-row">
+    <a href="{{ url_for('profile', user_id=u['id']) }}" class="avatar-sm">
+      {% if u['avatar'] %}<img src="{{ url_for('uploaded_file', filename=u['avatar']) }}">{% else %}{{ u['name'][0] }}{% endif %}
+    </a>
+    <div class="post-meta">
+      <a class="name" href="{{ url_for('profile', user_id=u['id']) }}">{{ u['name'] }}</a>
+    </div>
+    <div class="person-actions">
+      <a class="mini-btn msg" href="{{ url_for('chat', user_id=u['id']) }}">মেসেজ</a>
+      {% if u['id'] in friends %}
+        <button class="mini-btn friended" disabled>বন্ধু ✓</button>
+      {% else %}
+        <form method="POST" action="{{ url_for('add_friend', user_id=u['id']) }}">
+          <button class="mini-btn friend" type="submit">বন্ধু যোগ করো</button>
+        </form>
+      {% endif %}
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% block title %}{{ author['name'] }}-এর স্টোরি{% endblock %}
+{% block content %}
+<div class="story-overlay-inline">
+  <div class="story-card">
+    <a class="story-close" href="{{ url_for('home') }}">✕</a>
+    <div class="story-progress">
+      {% for s in stories %}<div></div>{% endfor %}
+    </div>
+    <div class="story-card-head">
+      <div class="avatar-sm" style="background:rgba(255,255,255,0.2);color:#fff;">
+        {% if author['avatar'] %}<img src="{{ url_for('uploaded_file', filename=author['avatar']) }}">{% else %}{{ author['name'][0] }}{% endif %}
+      </div>
+      <div>{{ author['name'] }}</div>
+    </div>
+    <div class="story-scroll">
+      {% for s in stories %}
+      <div class="story-slide">
+        {% if s['image'] %}<img class="story-slide-img" src="{{ url_for('uploaded_file', filename=s['image']) }}">{% endif %}
+        {% if s['text'] %}<div class="story-card-body">{{ s['text'] }}</div>{% endif %}
+        <div class="story-slide-time">{{ s['created_at']|time_ago }}</div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+{% endblock %}

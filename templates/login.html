@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% block title %}লগইন — আড্ডা{% endblock %}
+{% block auth_content %}
+<div class="auth-wrap">
+  <div class="auth-card">
+    <div class="auth-logo">আড্ডা</div>
+    <p class="auth-tag">বন্ধুদের সাথে পোস্ট, স্টোরি আর মেসেজ শেয়ার করার জায়গা</p>
+    <form method="POST">
+      <div class="field">
+        <label>ফোন নাম্বার অথবা জিমেইল</label>
+        <input type="text" name="identifier" placeholder="01XXXXXXXXX অথবা you@gmail.com" required>
+      </div>
+      <div class="field">
+        <label>পাসওয়ার্ড</label>
+        <input type="password" name="password" required>
+      </div>
+      <button class="btn-primary" type="submit">লগইন করো</button>
+    </form>
+    <div class="switch-line">নতুন এখানে? <a href="{{ url_for('register') }}">একাউন্ট তৈরি করো</a></div>
+  </div>
+</div>
+{% endblock %}

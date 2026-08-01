@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% block title %}নতুন স্টোরি — আড্ডা{% endblock %}
+{% block content %}
+<div class="modal-inline">
+  <h3>নতুন স্টোরি</h3>
+  <p class="muted" style="margin-top:-6px;">২৪ ঘন্টা পর এই স্টোরি নিজে থেকে মুছে যাবে।</p>
+  <form method="POST" enctype="multipart/form-data">
+    <textarea name="text" placeholder="কী মনে হচ্ছে এখন?" style="width:100%;min-height:100px;border:1.5px solid var(--line);border-radius:10px;padding:10px;font-size:14.5px;outline:none;font-family:inherit;"></textarea>
+    <label class="file-pill" style="margin-top:10px;">🖼️ ছবি যোগ করো (না দিলেও চলবে)<input type="file" name="image" accept="image/*"></label>
+    <div class="modal-actions">
+      <a class="cancel" href="{{ url_for('home') }}">বাতিল</a>
+      <button class="confirm" type="submit">পোস্ট করো</button>
+    </div>
+  </form>
+</div>
+{% endblock %}
