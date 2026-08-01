@@ -1,37 +1,3 @@
-/* =====================================================================
-   আড্ডা (ADDA) — MAIN STYLESHEET
-   Instagram / TikTok inspired dark theme — single top nav bar edition
-   =====================================================================
-   Table of contents
-   -----------------
-   01. Design tokens (colors, spacing, type, radius, shadow, motion)
-   02. Reset & base elements
-   03. Accessibility helpers
-   04. Scrollbar styling
-   05. Generic animation keyframes
-   06. Utility classes (spacing / text / flex / display)
-   07. Buttons
-   08. Form fields & inputs (incl. global file-input hiding)
-   09. Layout shell
-   10. Top navigation bar (single bar, all breakpoints)
-   11. Flash / toast messages
-   12. Auth screens (login / register)
-   13. Stories row + story viewer + new-story modal
-   14. Post composer
-   15. Feed & post cards
-   16. Comments
-   17. People / friends list
-   18. Profile page
-   19. Messages inbox & chat thread
-   20. Small reusable components (badge, tooltip, spinner, skeleton)
-   21. Print styles
-   22. Responsive fine-tuning (breakpoint sweep)
-   ===================================================================== */
-
-
-/* =====================================================================
-   01. DESIGN TOKENS
-   ===================================================================== */
 :root{
 
   --ig-gradient: linear-gradient(45deg, #FEDA75 0%, #FA7E1E 22%, #D62976 45%, #962FBF 68%, #4F5BD5 100%);
@@ -619,11 +585,14 @@ input[type="file"]{
   padding: 14px 18px;
   position: fixed;
   top: 0; left: 0; right: 0;
-  background: rgba(0,0,0,0.6);
-  backdrop-filter: blur(14px) saturate(160%);
-  -webkit-backdrop-filter: blur(14px) saturate(160%);
+  background: rgba(4,4,5,0.94);
   border-bottom: 1px solid var(--line);
   z-index: var(--z-sticky);
+  /* NOTE: intentionally no filter/backdrop-filter/transform here — any of
+     those on this element would make it the containing block for its
+     fixed-position descendants (including .mobile-nav), which pins the
+     bottom dock to this bar instead of the viewport. Keep this element
+     free of those properties. */
 }
 .mobile-topbar::after{
   content: "";
@@ -671,33 +640,41 @@ input[type="file"]{
   z-index: var(--z-sticky);
 }
 .mobile-nav a{
-  flex: 1;
+  flex: 0 0 auto;
   display: flex;
   align-items: center;
   justify-content: center;
   width: 46px; height: 46px;
   border-radius: 50%;
   font-size: 19px;
+  line-height: 1;
   color: var(--ink-soft);
   background: transparent;
+  /* neutralize full-color system emoji glyphs so the icons read as
+     clean monochrome symbols instead of clashing colorful emoji */
+  filter: grayscale(1) brightness(1.9) contrast(1.15);
   transition: background var(--dur-fast) var(--ease-standard),
               color var(--dur-fast) var(--ease-standard),
-              transform var(--dur-base) var(--ease-spring);
+              transform var(--dur-base) var(--ease-spring),
+              filter var(--dur-fast) var(--ease-standard);
 }
 .mobile-nav a:hover{
   background: var(--surface-hover);
   color: var(--ink);
+  filter: grayscale(1) brightness(2.2) contrast(1.2);
   transform: translateY(-6px) scale(1.12);
 }
 .mobile-nav a:active{ transform: translateY(-1px) scale(.94); }
 /* home reads as emphasized by default */
 .mobile-nav a:first-child{ color: var(--ink); }
-/* profile initial styled as a small gradient avatar chip */
+/* profile initial styled as a small gradient avatar chip — no filter,
+   since this one is real text (the user's initial), not an emoji */
 .mobile-nav a:last-child{
   background: var(--ig-gradient);
   color: #fff;
   font-weight: var(--fw-bold);
   font-size: 15px;
+  filter: none;
 }
 .mobile-nav a:last-child:hover{ filter: brightness(1.12); transform: translateY(-6px) scale(1.12); }
 
