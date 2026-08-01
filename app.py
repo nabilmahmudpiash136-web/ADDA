@@ -19,8 +19,7 @@ STORY_LIFETIME_SECONDS = 24 * 60 * 60
 
 app = Flask(__name__)
 # IMPORTANT: change this secret key before putting the site online for real.
-
-app.config["SECRET_KEY"] = "my-custom-super-secret-key-piash136"
+app.config["SECRET_KEY"] = os.environ.get("ADDA_SECRET_KEY", "dev-secret-change-me")
 app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
 app.config["MAX_CONTENT_LENGTH"] = 6 * 1024 * 1024  # 6 MB uploads max
 
@@ -96,6 +95,14 @@ def init_db():
             UNIQUE(user_id, friend_id)
         );
 
+        CREATE TABLE IF NOT EXISTS friend_requests (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            sender_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+            receiver_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+            created_at INTEGER NOT NULL,
+            UNIQUE(sender_id, receiver_id)
+        );
+
         CREATE TABLE IF NOT EXISTS messages (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             sender_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
@@ -146,6 +153,12 @@ def login_required(view):
 def friend_ids_of(db, user_id):
     rows = db.execute("SELECT friend_id FROM friendships WHERE user_id = ?", (user_id,)).fetchall()
     return {r["friend_id"] for r in rows}
+
+
+def sent_request_ids_of(db, user_id):
+    """IDs of people this user has sent a pending friend request to."""
+    rows = db.execute("SELECT receiver_id FROM friend_requests WHERE sender_id = ?", (user_id,)).fetchall()
+    return {r["receiver_id"] for r in rows}
 
 
 def time_ago(ts):
@@ -241,6 +254,7 @@ def home():
     db = get_db()
     me = current_user()
     friends = friend_ids_of(db, me["id"])
+    sent_ids = sent_request_ids_of(db, me["id"])
 
     cutoff = int(time.time()) - STORY_LIFETIME_SECONDS
     story_authors = db.execute(
@@ -280,6 +294,7 @@ def home():
             "comments": comments,
             "is_friend": p["user_id"] in friends,
             "is_me": p["user_id"] == me["id"],
+            "is_requested": p["user_id"] in sent_ids,
         })
 
     return render_template("home.html", posts=enriched, story_authors=story_authors)
@@ -376,23 +391,102 @@ def view_stories(user_id):
 def people():
     db = get_db()
     me = current_user()
-    friends = friend_ids_of(db, me["id"])
-    users = db.execute("SELECT * FROM users WHERE id != ? ORDER BY name ASC", (me["id"],)).fetchall()
-    return render_template("people.html", users=users, friends=friends)
+    tab = request.args.get("tab", "all")
+    if tab not in ("all", "requests", "friends"):
+        tab = "all"
+
+    friend_ids = friend_ids_of(db, me["id"])
+    sent_ids = sent_request_ids_of(db, me["id"])
+
+    all_users = db.execute(
+        "SELECT * FROM users WHERE id != ? ORDER BY name ASC", (me["id"],)
+    ).fetchall()
+
+    incoming_requests = db.execute(
+        """SELECT u.id, u.name, u.avatar, fr.created_at
+           FROM friend_requests fr JOIN users u ON u.id = fr.sender_id
+           WHERE fr.receiver_id = ?
+           ORDER BY fr.created_at DESC""",
+        (me["id"],),
+    ).fetchall()
+
+    my_friends = db.execute(
+        """SELECT u.* FROM users u
+           JOIN friendships f ON f.friend_id = u.id
+           WHERE f.user_id = ?
+           ORDER BY u.name ASC""",
+        (me["id"],),
+    ).fetchall()
+
+    return render_template(
+        "people.html",
+        tab=tab,
+        all_users=all_users,
+        incoming_requests=incoming_requests,
+        my_friends=my_friends,
+        friend_ids=friend_ids,
+        sent_ids=sent_ids,
+        request_count=len(incoming_requests),
+    )
 
 
-@app.route("/friend/<int:user_id>", methods=["POST"])
+@app.route("/friend-request/<int:user_id>", methods=["POST"])
 @login_required
-def add_friend(user_id):
+def send_friend_request(user_id):
     me = current_user()
-    if user_id == me["id"]:
-        return redirect(url_for("people"))
     db = get_db()
-    db.execute("INSERT OR IGNORE INTO friendships (user_id, friend_id) VALUES (?, ?)", (me["id"], user_id))
-    db.execute("INSERT OR IGNORE INTO friendships (user_id, friend_id) VALUES (?, ?)", (user_id, me["id"]))
+    if user_id == me["id"]:
+        return redirect(request.referrer or url_for("people"))
+
+    already_friends = db.execute(
+        "SELECT 1 FROM friendships WHERE user_id = ? AND friend_id = ?", (me["id"], user_id)
+    ).fetchone()
+    if already_friends:
+        return redirect(request.referrer or url_for("people"))
+
+    # if they already sent ME a request, accept it instead of creating a duplicate
+    their_request = db.execute(
+        "SELECT id FROM friend_requests WHERE sender_id = ? AND receiver_id = ?", (user_id, me["id"])
+    ).fetchone()
+    if their_request:
+        return _accept_request(db, me["id"], user_id)
+
+    db.execute(
+        "INSERT OR IGNORE INTO friend_requests (sender_id, receiver_id, created_at) VALUES (?, ?, ?)",
+        (me["id"], user_id, int(time.time())),
+    )
     db.commit()
-    flash("বন্ধু যোগ করা হয়েছে!", "success")
+    flash("ফ্রেন্ড রিকোয়েস্ট পাঠানো হয়েছে!", "success")
     return redirect(request.referrer or url_for("people"))
+
+
+def _accept_request(db, me_id, other_id):
+    db.execute("DELETE FROM friend_requests WHERE sender_id = ? AND receiver_id = ?", (other_id, me_id))
+    db.execute("INSERT OR IGNORE INTO friendships (user_id, friend_id) VALUES (?, ?)", (me_id, other_id))
+    db.execute("INSERT OR IGNORE INTO friendships (user_id, friend_id) VALUES (?, ?)", (other_id, me_id))
+    db.commit()
+    flash("এখন থেকে তোমরা বন্ধু!", "success")
+    return redirect(request.referrer or url_for("people", tab="friends"))
+
+
+@app.route("/friend-request/<int:user_id>/accept", methods=["POST"])
+@login_required
+def accept_friend_request(user_id):
+    me = current_user()
+    db = get_db()
+    return _accept_request(db, me["id"], user_id)
+
+
+@app.route("/friend-request/<int:user_id>/decline", methods=["POST"])
+@login_required
+def decline_friend_request(user_id):
+    me = current_user()
+    db = get_db()
+    db.execute(
+        "DELETE FROM friend_requests WHERE sender_id = ? AND receiver_id = ?", (user_id, me["id"])
+    )
+    db.commit()
+    return redirect(request.referrer or url_for("people", tab="requests"))
 
 
 # ---------------------------------------------------------------- profile
@@ -422,9 +516,11 @@ def profile(user_id):
 
     friend_count = db.execute("SELECT COUNT(*) c FROM friendships WHERE user_id = ?", (user_id,)).fetchone()["c"]
     is_friend = user_id in friend_ids_of(db, me["id"])
+    is_requested = user_id in sent_request_ids_of(db, me["id"])
     return render_template(
         "profile.html", profile_user=user, posts=enriched,
-        friend_count=friend_count, is_friend=is_friend, is_me=(user_id == me["id"])
+        friend_count=friend_count, is_friend=is_friend, is_requested=is_requested,
+        is_me=(user_id == me["id"])
     )
 
 
