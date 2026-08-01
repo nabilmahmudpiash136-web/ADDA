@@ -1,22 +1,134 @@
 {% extends "base.html" %}
 {% block title %}মেসেজ — আড্ডা{% endblock %}
 {% block content %}
-<h2 class="page-title">মেসেজ</h2>
+
+<div class="msg-head">
+  <div>
+    <h2 class="page-title u-mb-0">মেসেজ</h2>
+    {% if conversations|length > 0 %}
+      <p class="muted u-mt-0">{{ conversations|length }} টা কথোপকথন</p>
+    {% endif %}
+  </div>
+</div>
+
 {% if conversations|length == 0 %}
-  <div class="empty-state">এখনো কোনো মেসেজ নেই। "মানুষ" ট্যাব থেকে কাউকে মেসেজ পাঠাও।</div>
+  <div class="empty-state msg-empty">
+    <div class="msg-empty-icon">💬</div>
+    <h3>এখনো কোনো মেসেজ নেই</h3>
+    <p class="muted">কাউকে মেসেজ পাঠাতে "মানুষ" ট্যাবে গিয়ে বন্ধুদের খুঁজে বের করো।</p>
+    <a class="mini-btn friend msg-empty-cta" href="{{ url_for('people') }}">মানুষ খুঁজো</a>
+  </div>
 {% else %}
-<div class="conv-list">
+
+<div class="msg-search">
+  <span class="msg-search-ico">🔍</span>
+  <input
+    type="text"
+    id="conv-search"
+    placeholder="নাম দিয়ে খুঁজো..."
+    autocomplete="off"
+    oninput="filterConversations(this.value)"
+  >
+</div>
+
+<div class="conv-list" id="conv-list">
   {% for c in conversations %}
-  <a class="conv-row" href="{{ url_for('chat', user_id=c['id']) }}">
+  <a class="conv-row" href="{{ url_for('chat', user_id=c['id']) }}" data-name="{{ c['name']|lower }}">
     <div class="avatar-sm">
       {% if c['avatar'] %}<img src="{{ url_for('uploaded_file', filename=c['avatar']) }}">{% else %}{{ c['name'][0] }}{% endif %}
     </div>
     <div class="post-meta">
-      <div class="name" style="font-weight:700;font-size:14.5px;">{{ c['name'] }}</div>
+      <div class="name">{{ c['name'] }}</div>
       <div class="last">{{ c['last_text'] }}</div>
+    </div>
+    <div class="conv-side">
+      <span class="conv-time">{{ c['last_at']|time_ago }}</span>
+      <span class="conv-chevron">›</span>
     </div>
   </a>
   {% endfor %}
 </div>
+
+<div class="empty-state u-hidden" id="conv-no-match">কারো নাম মিলছে না।</div>
+
+<script>
+function filterConversations(query){
+  var q = query.trim().toLowerCase();
+  var rows = document.querySelectorAll('#conv-list .conv-row');
+  var visibleCount = 0;
+  rows.forEach(function(row){
+    var match = row.getAttribute('data-name').indexOf(q) !== -1;
+    row.style.display = match ? '' : 'none';
+    if(match) visibleCount++;
+  });
+  document.getElementById('conv-no-match').classList.toggle('u-hidden', visibleCount !== 0);
+}
+</script>
 {% endif %}
+
+<style>
+  /* scoped touch-ups for the messages inbox — everything else reuses
+     the shared dark/gradient design tokens already defined in style.css */
+  .msg-head{ margin-bottom: 14px; }
+
+  .msg-search{
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: var(--surface);
+    border: 1.5px solid var(--line-strong);
+    border-radius: var(--radius-full);
+    padding: 10px 16px;
+    margin-bottom: 16px;
+    transition: border-color var(--dur-fast);
+  }
+  .msg-search:focus-within{ border-color: var(--accent); }
+  .msg-search-ico{ font-size: 15px; opacity: .7; flex-shrink: 0; }
+  .msg-search input{
+    flex: 1;
+    border: none;
+    background: transparent;
+    padding: 0;
+    font-size: 14.5px;
+  }
+  .msg-search input:focus{ box-shadow: none; background: transparent; border: none; }
+
+  .conv-row{ position: relative; padding-right: 14px; }
+  .conv-row .post-meta{ padding-right: 6px; }
+  .conv-side{
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 4px;
+    flex-shrink: 0;
+  }
+  .conv-time{ font-size: 11px; color: var(--ink-faint); white-space: nowrap; }
+  .conv-chevron{
+    font-size: 18px;
+    color: var(--ink-faint);
+    line-height: 1;
+    transition: transform var(--dur-fast) var(--ease-standard), color var(--dur-fast);
+  }
+  .conv-row:hover .conv-chevron{ color: var(--accent); transform: translateX(3px); }
+
+  .msg-empty{ padding-top: 60px; }
+  .msg-empty-icon{
+    width: 72px; height: 72px;
+    border-radius: 50%;
+    background: var(--ig-gradient);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 30px;
+    margin: 0 auto 18px;
+    filter: grayscale(1) brightness(2);
+    opacity: .85;
+  }
+  .msg-empty h3{ margin-bottom: 6px; }
+  .msg-empty p{ max-width: 280px; margin-left: auto; margin-right: auto; }
+  .msg-empty-cta{
+    display: inline-block;
+    margin-top: 18px;
+    padding: 10px 22px;
+    font-size: 13.5px;
+  }
+</style>
 {% endblock %}
